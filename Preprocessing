@@ -1,0 +1,56 @@
+parent_folder = '......';
+lapingss_folder = '......';
+ssindex=load('EM_77index.csv');
+EMXX_77=load('EMXX_77.csv');
+EM_2068=load('EM_2068.csv');
+folders = dir(parent_folder);
+for i = 1:numel(folders)
+    folder_name = folders(i).name;
+    
+    if strcmp(folder_name, '.') || strcmp(folder_name, '..')
+        continue;
+    end
+    
+    if folders(i).isdir
+        % The folder is named folder_name and the contents in the folder can be handled here
+        disp(['Handle the folder: ', folder_name]);
+        subfolder_path = fullfile(parent_folder, folder_name);
+        files = dir(fullfile(subfolder_path, '*.txt'));  
+
+        swyg_array = [];
+        for k = 1:numel(files)
+            file_path = fullfile(subfolder_path, files(k).name); 
+            data = dlmread(file_path);  
+            column2 = data(:, 2); 
+            swyg_array = [swyg_array, column2];  
+        end
+        orswyg_array = swyg_array;
+        for d=1:77
+            select_swyg_array = swyg_array(480:650,d);
+            filter_swyg_array = medfilt1(select_swyg_array,5);
+            swyg_array(480:650,d) = filter_swyg_array;
+        end
+        for h=1:77
+            swyg_array(:,h)=smooth(smooth(swyg_array(:,h),15),1);
+            swyg_mean=mean(swyg_array(1558:2024,h));
+            swyg_array(:,h)=swyg_array(:,h)-swyg_mean;
+        end
+        swyg_array(swyg_array<0)=0;
+        yg_array = [];
+        oryg_array = [];
+    end
+%     % Proximity interpolation
+%     for w = 1:1:77
+%         sevenseven(w,:) = swyg_array(ssindex(w),:);
+%     end
+    % Linear interpolation
+    for j = 1:1:77
+        kx=(215+j*5-EM_2068(EMXX_77(j)))/(EM_2068(EMXX_77(j))-EM_2068(EMXX_77(j)-1));
+        yg_array(j,:)=kx*(swyg_array(EMXX_77(j),:)-swyg_array(EMXX_77(j)-1,:))+swyg_array(EMXX_77(j),:);
+    end
+    sevenseven = yg_array;
+
+    outorg_file_path = fullfile(lapingss_folder, [folder_name '_laping.csv']);
+    dlmwrite(outorg_file_path, sevenseven, 'delimiter', ',');
+end
+
